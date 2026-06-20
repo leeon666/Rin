@@ -67,17 +67,25 @@ export function contentHasImagesMissingMetadata(content: string) {
 }
 
 export function extractImage(content: string) {
-    const img_reg = /!\[.*?\]\((\S+?)(?:\s+"[^"]*")?\)/;
-    const img_match = img_reg.exec(content);
-    let avatar: string | undefined = undefined;
-    if (img_match) {
-        avatar = stripImageMetadataFromUrl(img_match[1]);
-    }
-    return avatar;
+    // Try markdown image syntax first: ![alt](url)
+    const mdReg = /!\[.*?\]\((\S+?)(?:\s+"[^"]*")?\)/;
+    const mdMatch = mdReg.exec(content);
+    if (mdMatch?.[1]) return stripImageMetadataFromUrl(mdMatch[1]);
+
+    // Fallback: try HTML <img> tag
+    const htmlReg = /<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i;
+    const htmlMatch = htmlReg.exec(content);
+    return htmlMatch ? stripImageMetadataFromUrl(htmlMatch[1]) : undefined;
 }
 
 export function extractImageWithMetadata(content: string) {
-    const img_reg = /!\[.*?\]\((\S+?)(?:\s+"[^"]*")?\)/;
-    const img_match = img_reg.exec(content);
-    return img_match?.[1];
+    // Try markdown image syntax first: ![alt](url)
+    const mdReg = /!\[.*?\]\((\S+?)(?:\s+"[^"]*")?\)/;
+    const mdMatch = mdReg.exec(content);
+    if (mdMatch?.[1]) return mdMatch[1];
+
+    // Fallback: try HTML <img> tag
+    const htmlReg = /<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/i;
+    const htmlMatch = htmlReg.exec(content);
+    return htmlMatch?.[1];
 }
