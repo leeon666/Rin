@@ -29,6 +29,8 @@ import type {
   ConfigType,
   ConfigResponse,
   AIConfig,
+  AIImageGenerateRequest,
+  AIImageGenerateResponse,
   UploadResponse,
   AuthStatus,
   LoginRequest,
@@ -151,6 +153,8 @@ export type {
   ConfigType,
   ConfigResponse,
   AIConfig,
+  AIImageGenerateRequest,
+  AIImageGenerateResponse,
   UploadResponse,
   AuthStatus,
   LoginRequest,
@@ -526,6 +530,14 @@ class ConfigAPI {
     return this.http.post<any>("/api/config/test-ai", body);
   }
 
+
+  async listAIModels(body: {
+    provider?: string;
+    api_url?: string;
+    api_key?: string;
+  }): Promise<ApiResponse<{ success: boolean; models?: string[]; error?: string; details?: string }>> {
+    return this.http.post<any>("/api/config/ai-models", body);
+  }
   async testWebhook(body: {
     webhook_url?: string;
     "webhook.method"?: string;
@@ -571,6 +583,17 @@ class StorageAPI {
     if (key) formData.append("key", key);
     
     return this.http.post<UploadResponse>("/api/storage", formData);
+  }
+}
+
+/**
+ * AI image generation API methods
+ */
+class AIImageAPI {
+  constructor(private http: HttpClient) {}
+
+  async generate(body: AIImageGenerateRequest): Promise<ApiResponse<AIImageGenerateResponse>> {
+    return this.http.post<AIImageGenerateResponse>("/api/ai/image", body);
   }
 }
 
@@ -659,6 +682,7 @@ export class ApiClient {
   moments: MomentsAPI;
   config: ConfigAPI;
   aiConfig: AIConfigAPI;
+  aiImage: AIImageAPI;
   storage: StorageAPI;
   search: SearchAPI;
   auth: AuthAPI;
@@ -675,6 +699,7 @@ export class ApiClient {
     this.moments = new MomentsAPI(this.http);
     this.config = new ConfigAPI(this.http);
     this.aiConfig = new AIConfigAPI(this.http);
+    this.aiImage = new AIImageAPI(this.http);
     this.storage = new StorageAPI(this.http);
     this.search = new SearchAPI(this.http);
     this.auth = new AuthAPI(this.http);

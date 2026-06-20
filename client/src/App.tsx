@@ -1,5 +1,6 @@
 import { AppProviders } from "./app/providers";
 import { AppRoutes } from "./app/routes";
+import { BlogWidgets } from "./components/blog-widgets";
 import { useAppBootstrap } from "./app/use-app-bootstrap";
 
 function App() {
@@ -8,6 +9,7 @@ function App() {
   return (
     <AppProviders config={config} profile={profile}>
       <AppRoutes />
+      <BlogWidgets />
     </AppProviders>
   )
 }

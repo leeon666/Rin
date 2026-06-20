@@ -1,4 +1,4 @@
-import Editor from '@monaco-editor/react';
+﻿import Editor from '@monaco-editor/react';
 import { editor } from 'monaco-editor';
 import React, { useRef, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +25,16 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
   const [preview, setPreview] = useState<'edit' | 'preview' | 'comparison'>('edit');
   const [uploading, setUploading] = useState(false);
   const { showAlert, AlertUI } = useAlert();
+
+  function insertMarkdown(text: string) {
+    const editorInstance = editorRef.current;
+    if (!editorInstance) return;
+    const selection = editorInstance.getSelection();
+    if (!selection) return;
+    editorInstance.executeEdits(undefined, [{ range: selection, text }]);
+    editorInstance.focus();
+    setContent(editorInstance.getValue());
+  }
 
   async function insertImage(
     file: File,
@@ -68,6 +78,27 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
     }
   };
 
+  function insertImageUrl() {
+    const rawUrl = window.prompt("请输入图片链接", "https://");
+    const url = (rawUrl || "").trim();
+    if (!url) return;
+    if (!/^https?:\/\//i.test(url)) {
+      showAlert("请输入以 http:// 或 https:// 开头的图片链接");
+      return;
+    }
+
+    let alt = "image";
+    try {
+      const parsed = new URL(url);
+      const name = decodeURIComponent(parsed.pathname.split("/").filter(Boolean).pop() || "");
+      alt = name.replace(/\.[a-z0-9]+$/i, "") || parsed.hostname || "image";
+    } catch {
+      alt = "image";
+    }
+
+    insertMarkdown(buildMarkdownImage(alt, url));
+  }
+
   function UploadImageButton() {
     const uploadRef = useRef<HTMLInputElement>(null);
     
@@ -104,7 +135,7 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
           accept="image/gif,image/jpeg,image/jpg,image/png"
         />
         <i className="ri-image-add-line" />
-        <span>Image</span>
+        <span>上传图片</span>
       </button>
     );
   }
@@ -161,6 +192,14 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
         <FlatTabButton active={preview === 'comparison'} onClick={() => setPreview('comparison')}> {t("comparison")} </FlatTabButton>
         <div className="flex-grow" />
         <UploadImageButton />
+        <button
+          type="button"
+          onClick={insertImageUrl}
+          className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-w px-3 py-2 text-sm t-primary transition-colors hover:border-black/20 dark:border-white/10 dark:hover:border-white/20"
+        >
+          <i className="ri-link" />
+          <span>图片链接</span>
+        </button>
         {uploading &&
           <div className="flex flex-row items-center space-x-2">
             <Loading type="spin" color="#FC466B" height={16} width={16} />
@@ -229,3 +268,5 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
     </div>
   );
 }
+
+

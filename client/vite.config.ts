@@ -1,9 +1,13 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react-swc'
 import { visualizer } from "rollup-plugin-visualizer";
+import { rm } from 'node:fs/promises'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
+  const configDir = dirname(fileURLToPath(import.meta.url));
   const isDev = mode === 'development';
   const serverPort = Number(process.env.RIN_SERVER_PORT || "11499");
   const serverTarget = `http://127.0.0.1:${serverPort}`;
@@ -19,6 +23,15 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
+      {
+        name: 'exclude-live2d-public-assets',
+        closeBundle: async () => {
+          await rm(resolve(configDir, '../dist/client/live2d-api'), {
+            recursive: true,
+            force: true,
+          })
+        },
+      },
       // Only open visualizer in build mode
       visualizer({ open: !isDev })
     ],

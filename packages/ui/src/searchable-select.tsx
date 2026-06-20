@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 
 export type SearchableSelectOption = {
   label: string;
@@ -74,7 +74,7 @@ export function SearchableSelect({
         className="flex w-full items-center justify-between gap-3 rounded-xl border border-black/10 bg-w px-4 py-3 text-left text-sm t-primary transition-colors hover:border-black/20 focus:outline-none focus:ring-2 focus:ring-theme/20 dark:border-white/10 dark:hover:border-white/20"
         onClick={() => {
           setIsOpen((current) => !current);
-          setQuery(value);
+          if (!isOpen) setQuery("");
         }}
       >
         <span className={`min-w-0 truncate ${buttonLabel ? "t-primary" : "text-neutral-400 dark:text-neutral-500"}`}>

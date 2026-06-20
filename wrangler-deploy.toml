@@ -1,0 +1,59 @@
+
+      #:schema node_modules/wrangler/config-schema.json
+      name = "rin-leeon-blog"
+      main = ".tmp/server-worker/_worker.js"
+      compatibility_date = "2026-01-20"
+
+      [assets]
+      directory = "./dist/client"
+      binding = "ASSETS"
+      
+[triggers]
+crons = ["*/20 * * * *"]
+      
+      
+
+      [vars]
+      S3_FOLDER = "images/"
+      S3_CACHE_FOLDER="cache/"
+      S3_REGION = "auto"
+      S3_ENDPOINT = ""
+      S3_ACCESS_HOST = ""
+      S3_BUCKET = ""
+      S3_FORCE_PATH_STYLE = "false"
+      CLOUDPASTE_API_BASE = "https://cloudpaste-leeon-backend.leeon123.workers.dev"
+      CLOUDPASTE_PUBLIC_BASE = "https://leeon123.eoty.cn"
+      CLOUDPASTE_UPLOAD_PATH = "/tigris/rin/"
+      WEBHOOK_URL = ""
+      RSS_TITLE = ""
+      RSS_DESCRIPTION = ""
+      CACHE_STORAGE_MODE = "database"
+      NAME = "Leeon Blog"
+      DESCRIPTION = "Personal Blog"
+      AVATAR = ""
+      PAGE_SIZE = "5"
+      RSS_ENABLE = "false"
+
+      [placement]
+      mode = "smart"
+    
+[[d1_databases]]
+binding = "DB"
+database_name = "rin-leeon-blog-db"
+database_id = "831f4374-78d5-4e48-8d18-708dadd6f13c"
+    
+
+[ai]
+binding = "AI"
+  
+
+[[queues.producers]]
+binding = "TASK_QUEUE"
+queue = "rin-leeon-blog-tasks"
+
+[[queues.consumers]]
+queue = "rin-leeon-blog-tasks"
+max_batch_size = 1
+max_batch_timeout = 5
+  
+

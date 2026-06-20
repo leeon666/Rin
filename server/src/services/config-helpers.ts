@@ -53,7 +53,7 @@ export function maskSensitiveFields(config: Record<string, unknown>): Record<str
   for (const key in config) {
     const value = config[key];
     if (SENSITIVE_SERVER_CONFIG_FIELDS.includes(key as (typeof SENSITIVE_SERVER_CONFIG_FIELDS)[number]) && value) {
-      result[key] = "••••••••";
+      result[key] = "********";
     } else {
       result[key] = value;
     }
@@ -218,7 +218,7 @@ export async function buildServerConfigResponse(
   configObj["ai_summary.provider"] = aiConfig.provider;
   configObj["ai_summary.model"] = aiConfig.model;
   configObj["ai_summary.api_url"] = aiConfig.api_url;
-  configObj["ai_summary.api_key"] = aiConfig.api_key.length > 0 ? "••••••••" : "";
+  configObj["ai_summary.api_key"] = aiConfig.api_key.length > 0 ? "********" : "";
 
   return maskSensitiveFields(configObj);
 }

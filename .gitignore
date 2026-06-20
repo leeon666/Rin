@@ -38,3 +38,11 @@ dist-ssr
 
 # Bun
 .bun/*
+# Local deployment/runtime artifacts
+.deploy/
+.tmp/
+.npm-cache/
+.bun-cache/
+.tools/
+.wrangler-config/
+client/public/live2d-api/

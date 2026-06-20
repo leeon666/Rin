@@ -10,7 +10,8 @@
     "queue_status_description": "AI 要約キューの進行状況、最近のタスク結果、失敗内容を確認します。",
     "settings_description": "サイトの挙動、連携設定、公開ルールを一か所で管理します。",
     "title": "管理画面",
-    "writing_description": "非公開の管理ワークスペースから記事を作成、編集、公開します。"
+    "writing_description": "非公開の管理ワークスペースから記事を作成、編集、公開します。",
+    "ai_image_description": "Generate images with Workers AI and store them in CloudPaste/Koofr."
   },
   "compat_tasks": {
     "title": "互換タスク",
@@ -715,5 +716,61 @@
   "sort_latest": "新着",
   "sort_popular": "人気",
   "total_tags": "全 {{count}} 個のタグ",
-  "anonymous": "匿名"
+  "anonymous": "匿名",
+  "ai_image": {
+    "title": "AI Image",
+    "generation": {
+      "title": "Generation",
+      "description": "Generate an image with Workers AI, then store it through CloudPaste/Koofr and return a blog-ready Markdown snippet.",
+      "badge": "Workers AI",
+      "prompt": "Prompt",
+      "random_prompt": "Random prompt",
+      "prompt_placeholder": "A quiet personal blog cover image, warm desk lamp, laptop, notebooks, cinematic lighting",
+      "prompt_required": "Write a prompt first.",
+      "negative_prompt": "Negative Prompt",
+      "negative_prompt_placeholder": "low quality, blurry, watermark, distorted text",
+      "default_negative_prompt": "low quality, blurry, watermark, distorted text, extra fingers, bad anatomy",
+      "model": "Model",
+      "search_model": "Search or enter a model",
+      "no_models": "No models",
+      "use_model$model": "Use model: {{model}}",
+      "width": "Width",
+      "height": "Height",
+      "steps": "Steps",
+      "guidance": "Guidance",
+      "seed": "Seed",
+      "seed_placeholder": "Leave empty for random",
+      "generate": "Generate image",
+      "generating": "Generating"
+    },
+    "result": {
+      "title": "Result",
+      "description": "The generated image URL and Markdown are ready to paste into a post.",
+      "image_alt": "AI generated image",
+      "copy_url": "Copy URL",
+      "copy_markdown": "Copy Markdown",
+      "url_copied": "URL copied.",
+      "markdown_copied": "Markdown copied.",
+      "copy_failed": "Copy failed. Select the text manually.",
+      "empty": "No generated image yet."
+    },
+    "models": {
+      "flux_1_schnell": "FLUX.1 Schnell (recommended)",
+      "flux_2_klein_4b": "FLUX.2 Klein 4B (very fast)",
+      "flux_2_klein_9b": "FLUX.2 Klein 9B (higher quality)",
+      "flux_2_dev": "FLUX.2 Dev",
+      "sdxl_base": "SDXL Base 1.0 (stable quality)",
+      "sdxl_lightning": "SDXL Lightning (fast)",
+      "dreamshaper": "DreamShaper 8 LCM",
+      "leonardo_phoenix": "Leonardo Phoenix",
+      "leonardo_lucid_origin": "Leonardo Lucid Origin"
+    },
+    "random_prompts": [
+      "A cozy personal blog cover image, warm desk lamp, laptop, handwritten notes, soft cinematic light, clean composition",
+      "A minimalist anime-style study room at night, glowing monitor, books, tea cup, calm blue and amber lighting",
+      "A dreamy illustration of a personal knowledge garden, floating cards, flowers, stars, elegant editorial composition",
+      "A clean tech blog hero image, abstract browser windows, code notes, soft gradients, professional and quiet",
+      "A peaceful morning writing desk beside a window, notebook, camera, plants, natural light, realistic photo style"
+    ]
+  }
 }

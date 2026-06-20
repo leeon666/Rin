@@ -26,7 +26,7 @@ export const WORKER_AI_MODELS: Record<string, string> = {
 };
 
 export const AI_SUMMARY_SYSTEM_PROMPT =
-    "你是一个中文内容摘要助手。请用简洁、准确、自然的中文总结用户提供的内容，不超过200字，不要添加原文没有的信息，不要输出标题或项目符号。";
+    "You are a concise Chinese content summarization assistant. Summarize the user content naturally and accurately in Chinese, within 200 Chinese characters. Do not add information that is not in the original text, and do not output a title or bullet list.";
 
 /**
  * Get full Worker AI model ID from short name
@@ -54,6 +54,86 @@ export function buildExternalAIChatCompletionsUrl(
     return `${normalizedApiUrl}/chat/completions`;
 }
 
+
+export function buildExternalAIModelsUrl(
+    provider: string,
+    apiUrl: string,
+): string {
+    const normalizedApiUrl = normalizeExternalAIBaseUrl(apiUrl || AI_PROVIDER_URLS[provider] || "");
+    if (!normalizedApiUrl) {
+        throw new Error("API URL not configured");
+    }
+
+    return `${normalizedApiUrl}/models`;
+}
+
+function extractModelIds(response: unknown): string[] {
+    const responseObj = response as any;
+    const candidates = Array.isArray(responseObj?.data)
+        ? responseObj.data
+        : Array.isArray(responseObj?.models)
+          ? responseObj.models
+          : Array.isArray(response)
+            ? response
+            : [];
+
+    const modelIds: string[] = candidates
+        .map((item: unknown) => {
+            if (typeof item === "string") return item;
+            if (item && typeof item === "object") {
+                const model = item as Record<string, unknown>;
+                return String(model.id || model.name || model.model || "").trim();
+            }
+            return "";
+        })
+        .filter((item: string) => item.length > 0);
+
+    return Array.from(new Set<string>(modelIds)).sort((left, right) => left.localeCompare(right));
+}
+export async function fetchAIModelList(
+    _env: Env,
+    config: {
+        provider: string;
+        api_key?: string;
+        api_url?: string;
+    },
+): Promise<{ success: boolean; models?: string[]; error?: string; details?: string }> {
+    try {
+        if (config.provider === "worker-ai") {
+            return { success: true, models: Object.keys(WORKER_AI_MODELS) };
+        }
+
+        if (!config.api_key) {
+            throw new Error("API key not configured");
+        }
+
+        const modelsUrl = buildExternalAIModelsUrl(config.provider, config.api_url || "");
+        const response = await fetch(modelsUrl, {
+            method: "GET",
+            headers: {
+                Accept: "application/json",
+                Authorization: `Bearer ${config.api_key}`,
+            },
+        });
+
+        const text = await response.text();
+        if (!response.ok) {
+            return {
+                success: false,
+                error: `API error ${response.status}`,
+                details: text.slice(0, 1000),
+            };
+        }
+
+        const data = text ? JSON.parse(text) : {};
+        return { success: true, models: extractModelIds(data) };
+    } catch (error) {
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : String(error),
+        };
+    }
+}
 function extractAIText(response: unknown): string | null {
     if (typeof response === "string") {
         return response;

@@ -287,6 +287,33 @@ export interface UploadResponse {
 }
 
 // ============================================================================
+// AI Image Types
+// ============================================================================
+
+export interface AIImageGenerateRequest {
+  prompt: string;
+  negativePrompt?: string;
+  model?: string;
+  width?: number;
+  height?: number;
+  steps?: number;
+  guidance?: number;
+  seed?: number;
+}
+
+export interface AIImageGenerateResponse {
+  url: string;
+  key: string;
+  markdown: string;
+  model: string;
+  width: number;
+  height: number;
+  steps: number;
+  guidance: number;
+  seed?: number;
+}
+
+// ============================================================================
 // Search Types
 // ============================================================================
 

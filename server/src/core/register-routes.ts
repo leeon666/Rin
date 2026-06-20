@@ -1,4 +1,5 @@
 import type { RinApp } from "./app-types";
+import { AIImageService } from "../services/ai-image";
 import { PasswordAuthService } from "../services/auth";
 import { CommentService } from "../services/comments";
 import { ConfigService } from "../services/config";
@@ -25,6 +26,7 @@ export function registerRoutes(app: RinApp) {
   app.route("/moments", MomentsService());
   app.route("/user", UserService());
   app.route("/auth", PasswordAuthService());
+  app.route("/ai", AIImageService());
   app.route("/config", ConfigService());
   app.route("/", RSSService());
   app.route("/favicon", FaviconService());

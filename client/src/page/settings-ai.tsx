@@ -17,6 +17,7 @@ import { ItemTitle } from "./settings-items";
 import {
   AI_MODEL_PRESETS,
   AI_PROVIDER_PRESETS,
+  buildAIModelListRequest,
   buildAITestRequest,
   getAIProviderFields,
   getAIProviderPreset,
@@ -41,6 +42,9 @@ export function AISummarySettings({
   const { t } = useTranslation();
   const [testStatus, setTestStatus] = useState<"idle" | "testing" | "success" | "error">("idle");
   const [testResult, setTestResult] = useState<{ success?: boolean; response?: string; error?: string; details?: string } | null>(null);
+  const [modelFetchStatus, setModelFetchStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [fetchedModels, setFetchedModels] = useState<string[]>([]);
+  const [modelFetchMessage, setModelFetchMessage] = useState("");
   const { AlertUI } = useAlert();
   const providerFields = getAIProviderFields(value.provider);
 
@@ -98,7 +102,32 @@ export function AISummarySettings({
     }
   };
 
-  const modelOptions = AI_MODEL_PRESETS[value.provider] || [];
+  const handleFetchModels = async () => {
+    setModelFetchStatus("loading");
+    setModelFetchMessage("");
+
+    const { data, error } = await client.config.listAIModels(buildAIModelListRequest({
+      provider: value.provider,
+      apiUrl: value.apiUrl,
+      apiKey: value.apiKey,
+    }));
+
+    if (error || !data?.success) {
+      setModelFetchStatus("error");
+      setModelFetchMessage(error?.value || data?.error || "Failed to load models.");
+      return;
+    }
+
+    const models = data.models || [];
+    setFetchedModels(models);
+    setModelFetchStatus("success");
+    setModelFetchMessage(models.length > 0 ? `Loaded ${models.length} models.` : "No models returned.");
+    if (!value.model && models[0]) {
+      onChange({ model: models[0] });
+    }
+  };
+
+  const modelOptions = Array.from(new Set([...(fetchedModels || []), ...(AI_MODEL_PRESETS[value.provider] || [])]));
 
   return (
     <>
@@ -141,7 +170,15 @@ export function AISummarySettings({
             <SettingsCardBody>
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="space-y-2">
-                  <p className="text-sm font-medium t-primary">{t("settings.ai_summary.model.title")}</p>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium t-primary">{t("settings.ai_summary.model.title")}</p>
+                    <Button
+                      secondary
+                      title={modelFetchStatus === "loading" ? "Loading models" : "Load models"}
+                      onClick={handleFetchModels}
+                      disabled={modelFetchStatus === "loading"}
+                    />
+                  </div>
                   <SearchableSelect
                     value={value.model}
                     onChange={(nextValue) => {
@@ -157,6 +194,11 @@ export function AISummarySettings({
                     allowCustomValue
                     customValueLabel={(nextValue) => `${t("update.title")}: ${nextValue}`}
                   />
+                  {modelFetchMessage ? (
+                    <p className={`text-xs ${modelFetchStatus === "error" ? "text-rose-600 dark:text-rose-300" : "text-neutral-500 dark:text-neutral-400"}`}>
+                      {modelFetchMessage}
+                    </p>
+                  ) : null}
                 </div>
                 {providerFields.requiresApiKey ? (
                   <div className="space-y-2">

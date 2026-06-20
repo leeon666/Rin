@@ -56,7 +56,7 @@ async function syncWorkerSecrets(workerName: string) {
 
   try {
     await $`${bunExec} x wrangler secret bulk ${tempFile} --name ${workerName}`;
-    console.log(`âœ… Synced ${secretKeys.length} worker secret(s)`);
+    console.log(`âœ?Synced ${secretKeys.length} worker secret(s)`);
   } finally {
     await unlink(tempFile).catch(() => {});
   }
@@ -65,13 +65,13 @@ async function syncWorkerSecrets(workerName: string) {
 async function buildClient() {
   const distIndex = Bun.file("./dist/client/index.html");
   if (await distIndex.exists()) {
-    console.log("âœ… Using pre-built client from ./dist/client");
+    console.log("âœ?Using pre-built client from ./dist/client");
     return;
   }
 
   console.log("ðŸ”¨ Building client...");
   await $`cd client && ${bunExec} run build`.quiet();
-  console.log("âœ… Client built successfully");
+  console.log("âœ?Client built successfully");
 }
 
 type R2BucketInfo = {
@@ -297,11 +297,12 @@ export async function runCloudflareDeploy(target: "all" | "server" | "client" = 
   await fixTopField("remote", dbName, infoExists);
 
   if (target === "server") {
-    await $`${bunExec} x wrangler deploy`;
+    await $`${bunExec} x wrangler deploy --no-bundle`;
     await syncWorkerSecrets(workerName);
     return;
   }
 
-  await $`${bunExec} x wrangler deploy`;
+  await $`${bunExec} x wrangler deploy --no-bundle`;
   await syncWorkerSecrets(workerName);
 }
+

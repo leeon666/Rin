@@ -4,7 +4,7 @@ import { client, endpoint } from "../app/runtime";
 import { defaultClientConfig, defaultServerConfig } from "../state/config";
 import { headersWithAuth } from "../utils/auth";
 
-const MASKED_SECRET = "••••••••";
+const MASKED_SECRET = "********";
 
 export type ImportMessage = { title: string; reason: string };
 export type SettingsDraft = {
@@ -126,7 +126,7 @@ export async function loadAIConfigState() {
     enabled: data?.["ai_summary.enabled"] === "true",
     provider: data?.["ai_summary.provider"] ?? "openai",
     model: data?.["ai_summary.model"] ?? "gpt-4o-mini",
-    apiKeySet: data?.["ai_summary.api_key"] === "••••••••",
+    apiKeySet: data?.["ai_summary.api_key"] === MASKED_SECRET,
     apiUrl: data?.["ai_summary.api_url"] ?? "",
   };
 }
@@ -155,6 +155,28 @@ export function buildAITestRequest({
   return requestBody;
 }
 
+
+export function buildAIModelListRequest({
+  provider,
+  apiUrl,
+  apiKey,
+}: {
+  provider: string;
+  apiUrl: string;
+  apiKey: string;
+}) {
+  const preset = AI_PROVIDER_PRESETS.find((item) => item.value === provider);
+  const requestBody: Record<string, string> = { provider };
+
+  if (provider !== "worker-ai" && (apiUrl || preset?.url)) {
+    requestBody.api_url = apiUrl || preset?.url || "";
+  }
+  if (apiKey.trim()) {
+    requestBody.api_key = apiKey.trim();
+  }
+
+  return requestBody;
+}
 export function getAIProviderPreset(provider: string) {
   return AI_PROVIDER_PRESETS.find((item) => item.value === provider);
 }

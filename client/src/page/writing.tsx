@@ -1,6 +1,6 @@
-import i18n from 'i18next';
+﻿import i18n from 'i18next';
 import _ from 'lodash';
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useMemo, useState} from "react";
 import {Helmet} from "react-helmet";
 import {useTranslation} from "react-i18next";
 import Loading from 'react-loading';
@@ -116,7 +116,7 @@ async function update({
   }
 }
 
-// 写作页面
+// 鍐欎綔椤甸潰
 export function WritingPage({ id }: { id?: number }) {
   const { t } = useTranslation();
   const siteConfig = useSiteConfig();
@@ -130,7 +130,43 @@ export function WritingPage({ id }: { id?: number }) {
   const [content, setContent] = cache.useCache("content", "");
   const [createdAt, setCreatedAt] = useState<Date | undefined>(new Date());
   const [publishing, setPublishing] = useState(false)
+  const [manualSummaryOpen, setManualSummaryOpen] = useState(false);
+  const [manualSummaryPrompt, setManualSummaryPrompt] = useState("");
   const { showAlert, AlertUI } = useAlert()
+  const manualSummarySource = useMemo(() => {
+    return [
+      title ? `标题：${title}` : "标题：未填写",
+      summary ? `当前简介：${summary}` : "当前简介：未填写",
+      "正文：",
+      content || "（正文为空）",
+    ].join("\n\n");
+  }, [title, summary, content]);
+
+  function buildManualSummaryPrompt() {
+    return [
+      "请根据下面的博客文章生成一段适合放在文章简介/AI 摘要里的中文总结。",
+      "要求：",
+      "1. 用简洁自然的中文，保留文章重点。",
+      "2. 控制在 80-160 字左右。",
+      "3. 不要编造正文里没有的信息。",
+      "4. 只输出总结正文，不要输出标题、列表或解释。",
+      "",
+      manualSummarySource,
+    ].join("\n");
+  }
+
+  async function copyManualSummaryPrompt() {
+    const prompt = buildManualSummaryPrompt();
+    setManualSummaryPrompt(prompt);
+    setManualSummaryOpen(true);
+    try {
+      await navigator.clipboard.writeText(prompt);
+      showAlert("已复制文章和提示词，去任意 AI 网页端粘贴发送即可。得到总结后再粘贴回简介框。");
+    } catch {
+      showAlert("已生成提示词，但浏览器拒绝自动复制；你可以手动复制文本框里的内容。");
+    }
+  }
+
   function publishButton() {
     if (publishing) return;
     const tagsplit =
@@ -263,13 +299,40 @@ export function WritingPage({ id }: { id?: number }) {
                 className="text-base"
               />
             </div>
-            <Input
-              id={id}
-              value={summary}
-              setValue={setSummary}
-              placeholder={t("summary")}
-              variant="flat"
-            />
+            <div className="flex flex-col gap-2">
+              <Input
+                id={id}
+                value={summary}
+                setValue={setSummary}
+                placeholder={t("summary")}
+                variant="flat"
+              />
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={copyManualSummaryPrompt}
+                  className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-w px-3 py-2 text-sm t-primary transition-colors hover:border-black/20 dark:border-white/10 dark:hover:border-white/20"
+                >
+                  <i className="ri-file-copy-line" />
+                  <span>复制 AI 摘要提示词</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setManualSummaryOpen((open) => !open)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-black/10 bg-w px-3 py-2 text-sm t-primary transition-colors hover:border-black/20 dark:border-white/10 dark:hover:border-white/20"
+                >
+                  <i className="ri-ai-generate" />
+                  <span>手动 AI 摘要</span>
+                </button>
+              </div>
+              {manualSummaryOpen && (
+                <textarea
+                  value={manualSummaryPrompt || buildManualSummaryPrompt()}
+                  onChange={(event) => setManualSummaryPrompt(event.target.value)}
+                  className="min-h-[10rem] w-full resize-y rounded-xl border border-black/10 bg-secondary px-3 py-2 text-sm outline-none dark:border-white/10"
+                />
+              )}
+            </div>
             <Input
               id={id}
               value={alias}
@@ -344,3 +407,4 @@ export function WritingPage({ id }: { id?: number }) {
     </>
   );
 }
+

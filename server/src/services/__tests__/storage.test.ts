@@ -62,6 +62,7 @@ describe('StorageService', () => {
     let sqlite: Database;
     let env: Env;
     let app: Hono<{ Bindings: Env; Variables: Variables }>;
+    const originalFetch = globalThis.fetch;
 
     beforeEach(async () => {
         const mockDB = createMockDB();
@@ -98,6 +99,7 @@ describe('StorageService', () => {
     });
 
     afterEach(() => {
+        globalThis.fetch = originalFetch;
         cleanupTestDB(sqlite);
     });
 
@@ -272,6 +274,70 @@ describe('StorageService', () => {
             expect(res.status).toBe(500);
             expect(await res.text()).toBe('S3_ACCESS_KEY_ID is not defined');
         });
+
+        it('should upload through CloudPaste when configured', async () => {
+            const uploadCalls: Array<{
+                url: string;
+                method: string | undefined;
+                auth: string | null;
+                filename: string | null;
+                contentType: string | null;
+                body: string;
+            }> = [];
+            const cloudPasteEnv = createMockEnv({
+                CLOUDPASTE_API_BASE: 'https://cloudpaste-worker.example.com',
+                CLOUDPASTE_PUBLIC_BASE: 'https://files.example.com',
+                CLOUDPASTE_AUTH_TOKEN: 'test-cloudpaste-key',
+                CLOUDPASTE_UPLOAD_PATH: '/koofr/rin/',
+                S3_FOLDER: 'images/',
+                S3_ENDPOINT: '' as any,
+                S3_BUCKET: '' as any,
+                S3_ACCESS_KEY_ID: '',
+                S3_SECRET_ACCESS_KEY: '',
+            });
+
+            globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+                uploadCalls.push({
+                    url: input.toString(),
+                    method: init?.method,
+                    auth: new Headers(init?.headers).get('authorization'),
+                    filename: new Headers(init?.headers).get('x-fs-filename'),
+                    contentType: new Headers(init?.headers).get('content-type'),
+                    body: await new Response(init?.body).text(),
+                });
+
+                return new Response(JSON.stringify({ code: 200, data: { success: true } }), {
+                    status: 200,
+                    headers: { 'content-type': 'application/json' },
+                });
+            }) as typeof fetch;
+
+            const cloudPasteApp = createAppWithEnv(cloudPasteEnv, 1);
+            const formData = new FormData();
+            formData.append('key', 'test.txt');
+            formData.append('file', new File(['test content'], 'test.txt', { type: 'text/plain' }));
+
+            const res = await cloudPasteApp.request('/', {
+                method: 'POST',
+                body: formData,
+            }, cloudPasteEnv);
+
+            expect(res.status).toBe(200);
+            expect(uploadCalls).toHaveLength(1);
+            expect(uploadCalls[0]?.method).toBe('PUT');
+            expect(uploadCalls[0]?.auth).toBe('ApiKey test-cloudpaste-key');
+            expect(uploadCalls[0]?.filename).toMatch(/^[a-f0-9]+\.txt$/);
+            expect(uploadCalls[0]?.contentType).toBe('text/plain;charset=utf-8');
+            expect(uploadCalls[0]?.body).toBe('test content');
+
+            const uploadUrl = new URL(uploadCalls[0]!.url);
+            expect(uploadUrl.origin).toBe('https://cloudpaste-worker.example.com');
+            expect(uploadUrl.pathname).toBe('/api/fs/upload');
+            expect(uploadUrl.searchParams.get('path')).toBe('/koofr/rin/images/');
+
+            const payload = await res.json() as { url: string };
+            expect(payload.url).toMatch(/^https:\/\/files\.example\.com\/api\/p\/koofr\/rin\/images\/[a-f0-9]+\.txt$/);
+        });
     });
 
     describe('GET /blob/* - Stream file', () => {
@@ -318,6 +384,49 @@ describe('StorageService', () => {
             expect(res.status).toBe(200);
             expect(res.headers.get('content-type')).toBe('text/plain');
             expect(await res.text()).toBe('test');
+        });
+
+        it('should stream a CloudPaste object through the blob route', async () => {
+            const contentCalls: Array<{ url: string; auth: string | null }> = [];
+            const cloudPasteEnv = createMockEnv({
+                CLOUDPASTE_API_BASE: 'https://cloudpaste-worker.example.com',
+                CLOUDPASTE_PUBLIC_BASE: 'https://files.example.com',
+                CLOUDPASTE_AUTH_TOKEN: 'ApiKey already-prefixed-key',
+                CLOUDPASTE_UPLOAD_PATH: '/koofr/rin/',
+                S3_FOLDER: 'images/',
+                S3_ENDPOINT: '' as any,
+                S3_BUCKET: '' as any,
+                S3_ACCESS_KEY_ID: '',
+                S3_SECRET_ACCESS_KEY: '',
+            });
+
+            globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+                contentCalls.push({
+                    url: input.toString(),
+                    auth: new Headers(init?.headers).get('authorization'),
+                });
+
+                return new Response('test', {
+                    status: 200,
+                    headers: {
+                        'content-type': 'text/plain',
+                        'content-length': '4',
+                    },
+                });
+            }) as typeof fetch;
+
+            const cloudPasteApp = createAppWithEnv(cloudPasteEnv, 1);
+            const res = await cloudPasteApp.request('/blob/images/test.txt', { method: 'GET' }, cloudPasteEnv);
+
+            expect(res.status).toBe(200);
+            expect(res.headers.get('content-type')).toBe('text/plain');
+            expect(await res.text()).toBe('test');
+            expect(contentCalls).toHaveLength(1);
+            expect(contentCalls[0]?.auth).toBe('ApiKey already-prefixed-key');
+
+            const contentUrl = new URL(contentCalls[0]!.url);
+            expect(contentUrl.pathname).toBe('/api/fs/content');
+            expect(contentUrl.searchParams.get('path')).toBe('/koofr/rin/images/test.txt');
         });
     });
 });

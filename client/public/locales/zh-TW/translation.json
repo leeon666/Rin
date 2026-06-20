@@ -10,7 +10,8 @@
     "queue_status_description": "查看 AI 摘要佇列進度、最近任務結果與失敗資訊。",
     "settings_description": "在統一的後台空間中管理站點行為、整合配置與發佈規則。",
     "title": "後台管理",
-    "writing_description": "在獨立的管理工作區中編寫、編輯並發佈內容。"
+    "writing_description": "在獨立的管理工作區中編寫、編輯並發佈內容。",
+    "ai_image_description": "使用 Workers AI 生成圖片，並通過 CloudPaste/Koofr 保存。"
   },
   "compat_tasks": {
     "title": "相容任務",
@@ -724,5 +725,61 @@
   "sort_latest": "最新",
   "sort_popular": "熱門",
   "total_tags": "共 {{count}} 個標籤",
-  "anonymous": "匿名"
+  "anonymous": "匿名",
+  "ai_image": {
+    "title": "AI 生图",
+    "generation": {
+      "title": "生成设置",
+      "description": "使用 Workers AI 生成图片，并保存到 CloudPaste/Koofr。",
+      "badge": "Workers AI",
+      "prompt": "提示词",
+      "random_prompt": "随机提示词",
+      "prompt_placeholder": "安静的个人博客封面图，暖色台灯，笔记本电脑，手写笔记，电影感光线",
+      "prompt_required": "请先填写提示词。",
+      "negative_prompt": "反向提示词",
+      "negative_prompt_placeholder": "低质量，模糊，水印，文字变形",
+      "default_negative_prompt": "低质量，模糊，水印，文字变形，多余手指，错误人体结构",
+      "model": "模型",
+      "search_model": "搜索或输入模型",
+      "no_models": "没有模型",
+      "use_model$model": "使用模型：{{model}}",
+      "width": "宽度",
+      "height": "高度",
+      "steps": "步数",
+      "guidance": "引导强度",
+      "seed": "随机种子",
+      "seed_placeholder": "留空则随机",
+      "generate": "生成图片",
+      "generating": "生成中"
+    },
+    "result": {
+      "title": "生成结果",
+      "description": "生成后的图片链接和 Markdown 可以直接粘贴到文章中。",
+      "image_alt": "AI 生成图片",
+      "copy_url": "复制链接",
+      "copy_markdown": "复制 Markdown",
+      "url_copied": "链接已复制。",
+      "markdown_copied": "Markdown 已复制。",
+      "copy_failed": "复制失败，请手动选中文本复制。",
+      "empty": "还没有生成图片。"
+    },
+    "models": {
+      "flux_1_schnell": "FLUX.1 Schnell（推荐）",
+      "flux_2_klein_4b": "FLUX.2 Klein 4B（速度很快）",
+      "flux_2_klein_9b": "FLUX.2 Klein 9B（质量更高）",
+      "flux_2_dev": "FLUX.2 Dev",
+      "sdxl_base": "SDXL Base 1.0（效果稳定）",
+      "sdxl_lightning": "SDXL Lightning（速度快）",
+      "dreamshaper": "DreamShaper 8 LCM",
+      "leonardo_phoenix": "Leonardo Phoenix",
+      "leonardo_lucid_origin": "Leonardo Lucid Origin"
+    },
+    "random_prompts": [
+      "个人博客封面图，书桌，电脑，暖色灯光",
+      "动漫风夜晚书房，屏幕，书本，茶杯",
+      "个人知识花园插画，卡片，花朵，星星",
+      "清爽的科技博客头图，浏览器窗口，代码笔记",
+      "窗边清晨写作书桌，笔记本，相机，绿植，自然光"
+    ]
+  }
 }

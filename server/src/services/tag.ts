@@ -77,6 +77,7 @@ export function TagService(): Hono {
 export async function bindTagToPost(db: DB, feedId: number, tags: string[]) {
     await db.delete(feedHashtags).where(eq(feedHashtags.feedId, feedId));
     
+    if (!tags || !Array.isArray(tags) || tags.length === 0) return;
     for (const tag of tags) {
         const tagId = await getTagIdOrCreate(db, tag);
         await db.insert(feedHashtags).values({
@@ -103,3 +104,4 @@ async function getTagIdOrCreate(db: DB, name: string) {
         }
     }
 }
+

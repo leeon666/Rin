@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { wrapTime } from "hono/timing";
 import type { AppContext } from "../core/hono-types";
 import { setAIConfig, getAIConfig } from "../utils/db-config";
-import { testAIModel } from "../utils/ai";
+import { fetchAIModelList, testAIModel } from "../utils/ai";
 import { notify } from "../utils/webhook";
 import {
     buildCombinedConfigResponse,
@@ -69,6 +69,27 @@ export function ConfigService(): Hono {
         return c.json(result);
     });
 
+
+    app.post('/ai-models', async (c: AppContext) => {
+        const admin = c.get('admin');
+
+        if (!admin) {
+            return c.json({ error: 'Unauthorized' }, 401);
+        }
+
+        const env = c.get('env');
+        const serverConfig = c.get('serverConfig');
+        const body = await wrapTime(c, 'request_body', c.req.json().catch(() => ({})));
+        const config = await wrapTime(c, 'ai_config', getAIConfig(serverConfig));
+        const requestConfig = {
+            provider: body.provider || config.provider,
+            api_url: body.api_url !== undefined ? body.api_url : config.api_url,
+            api_key: body.api_key !== undefined ? body.api_key : config.api_key,
+        };
+
+        const result = await wrapTime(c, 'ai_models', fetchAIModelList(env, requestConfig));
+        return c.json(result, result.success ? 200 : 400);
+    });
     app.post('/test-webhook', async (c: AppContext) => {
         const admin = c.get('admin');
 

@@ -14,6 +14,7 @@ describe("collectWorkerSecrets", () => {
       ADMIN_PASSWORD: "password",
       RIN_GITHUB_CLIENT_ID: "client-id",
       RIN_GITHUB_CLIENT_SECRET: "client-secret",
+      CLOUDPASTE_AUTH_TOKEN: "cloudpaste-token",
       S3_ACCESS_KEY_ID: "access-key",
       S3_SECRET_ACCESS_KEY: "secret-key",
       UNUSED: "ignored",
@@ -25,6 +26,7 @@ describe("collectWorkerSecrets", () => {
       ADMIN_PASSWORD: "password",
       RIN_GITHUB_CLIENT_ID: "client-id",
       RIN_GITHUB_CLIENT_SECRET: "client-secret",
+      CLOUDPASTE_AUTH_TOKEN: "cloudpaste-token",
       S3_ACCESS_KEY_ID: "access-key",
       S3_SECRET_ACCESS_KEY: "secret-key",
     });

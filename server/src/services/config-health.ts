@@ -176,8 +176,9 @@ export async function buildHealthCheckResponse(
     );
   }
 
+  const usesCloudPaste = Boolean(env.CLOUDPASTE_API_BASE && env.CLOUDPASTE_AUTH_TOKEN);
   const usesR2Binding = Boolean(env.R2_BUCKET);
-  const requiredStorageKeys = usesR2Binding
+  const requiredStorageKeys = usesCloudPaste || usesR2Binding
     ? ([] as const)
     : ([
         ["S3_ENDPOINT", env.S3_ENDPOINT],
