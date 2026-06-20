@@ -84,12 +84,12 @@ export function FeedService(): Hono<{
             offset: page_num * limit_num,
             limit: limit_num + 1,
         }))).map(({ content, hashtags, summary, ...other }: any) => {
-            const avatar = extractImageWithMetadata(content);
+            const extractedAvatar = extractImageWithMetadata(content);
             return {
                 summary: summary.length > 0 ? summary : content.length > 100 ? content.slice(0, 100) : content,
                 hashtags: hashtags.map(({ hashtag }: any) => hashtag),
-                avatar,
-                ...other
+                ...other,
+                avatar: other.avatar || extractedAvatar,
             };
         });
 
@@ -523,10 +523,12 @@ export function SearchService(): Hono<{
             },
             orderBy: [desc(feeds.createdAt), desc(feeds.updatedAt)],
         })))).map(({ content, hashtags, summary, ...other }: any) => {
+            const extractedAvatar = extractImageWithMetadata(content);
             return {
                 summary: summary.length > 0 ? summary : content.length > 100 ? content.slice(0, 100) : content,
                 hashtags: hashtags.map(({ hashtag }: any) => hashtag),
-                ...other
+                ...other,
+                avatar: other.avatar || extractedAvatar,
             };
         });
 
