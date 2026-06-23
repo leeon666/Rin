@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { localPlaylist } from "../assets/local-music";
 
 const LIVE2D_SCRIPT_ID = "rin-live2d-nova-script";
 const LIVE2D_CSS_ID = "rin-live2d-nova-css";
@@ -9,7 +8,6 @@ const APLAYER_CSS_ID = "rin-aplayer-css";
 const APLAYER_FIX_CSS_ID = "rin-aplayer-fix-css";
 
 const PLAYLIST_IDS = ["13715807689", "3778678"];
-const CLOUDPASTE_BASE = "https://cloudpaste-leeon-backend.leeon123.workers.dev";
 
 interface MetingSong {
   title: string;
@@ -17,6 +15,13 @@ interface MetingSong {
   url: string;
   pic: string;
   lrc: string;
+}
+
+interface LocalSong {
+  name: string;
+  artist: string;
+  title: string;
+  url: string;
 }
 
 function loadScript(id: string, src: string) {
@@ -50,18 +55,52 @@ function removeElement(id: string) {
   document.getElementById(id)?.remove();
 }
 
+function removeElements(selector: string) {
+  document.querySelectorAll(selector).forEach((element) => element.remove());
+}
+
+function isWidgetDisabledPath(pathname: string) {
+  return pathname.startsWith("/admin") || pathname.startsWith("/login") || pathname.startsWith("/callback");
+}
+
+function cleanupGlobalWidgetArtifacts() {
+  cleanupMusicWidget();
+  cleanupLive2DWidget();
+}
+
+function cleanupLive2DWidget() {
+  removeElement("waifu");
+  removeElement("waifu-toggle");
+  removeElement("waifu-tips");
+  removeElements(".waifu, #live2d, canvas[id*='live2d'], .live2d-widget-container");
+  removeElement(LIVE2D_CSS_ID);
+  removeElement(LIVE2D_SCRIPT_ID);
+}
+
+function cleanupMusicWidget() {
+  removeElement("rin-music-widget");
+  removeElement(APLAYER_SCRIPT_ID);
+  removeElement(APLAYER_CSS_ID);
+  removeElement(APLAYER_FIX_CSS_ID);
+  removeElements(".aplayer, .aplayer-lrc, .aplayer-list, .aplayer-notice, .aplayer-body, .aplayer-miniswitcher");
+}
+
 function Live2DWidget({ disabled }: { disabled: boolean }) {
   useEffect(() => {
+    let cancelled = false;
     if (disabled || window.innerWidth < 768) {
-      removeElement("waifu");
-      removeElement(LIVE2D_CSS_ID);
-      removeElement(LIVE2D_SCRIPT_ID);
-      return;
+      cleanupLive2DWidget();
+      return () => { cancelled = true; cleanupLive2DWidget(); };
     }
     loadStylesheet(LIVE2D_CSS_ID, "https://cdn.jsdelivr.net/gh/nova1751/live2d-api@latest/css/left.min.css");
     loadScript(LIVE2D_SCRIPT_ID, "https://cdn.jsdelivr.net/gh/nova1751/live2d-api@latest/jsdelivr/random/autoload.min.js")
+      .then(() => {
+        if (cancelled || isWidgetDisabledPath(window.location.pathname)) {
+          cleanupLive2DWidget();
+        }
+      })
       .catch(() => undefined);
-    return () => { removeElement(LIVE2D_CSS_ID); removeElement(LIVE2D_SCRIPT_ID); };
+    return () => { cancelled = true; cleanupLive2DWidget(); };
   }, [disabled]);
   return null;
 }
@@ -95,15 +134,26 @@ async function fetchPlaylist(id: string): Promise<MetingSong[]> {
   return resp.json();
 }
 
-function toAPlayerAudio(song: MetingSong): APlayerAudio {
-  return { name: song.title, artist: song.author, url: song.url, cover: song.pic, lrc: song.lrc };
+async function fetchLocalSongs(): Promise<LocalSong[]> {
+  try {
+    const resp = await fetch("/api/music/list", { cache: "no-store" });
+    if (!resp.ok) return [];
+    const data = await resp.json();
+    return (data.songs || []) as LocalSong[];
+  } catch {
+    return [];
+  }
 }
 
-function localToAPlayerAudio(song: typeof localPlaylist[0]): APlayerAudio {
+function toAPlayerAudio(song: MetingSong): APlayerAudio {
+  return { name: song.title, artist: song.author, url: song.url, cover: song.pic, lrc: "" };
+}
+
+function localToAPlayerAudio(song: LocalSong): APlayerAudio {
   return {
-    name: song.t || song.n,
-    artist: song.a,
-    url: CLOUDPASTE_BASE + "/api/p/tigris/" + song.p,
+    name: song.title || song.name,
+    artist: song.artist,
+    url: song.url,
     cover: "",
     lrc: "",
   };
@@ -124,35 +174,41 @@ function injectAPlayerFixCss() {
 function MusicWidget({ disabled }: { disabled: boolean }) {
   useEffect(() => {
     const containerId = "rin-music-widget";
+    let cancelled = false;
+
     if (disabled) {
-      removeElement(containerId);
-      removeElement(APLAYER_SCRIPT_ID);
-      removeElement(APLAYER_CSS_ID);
-      removeElement(APLAYER_FIX_CSS_ID);
-      document.querySelector(".aplayer")?.remove();
-      return;
+      cleanupMusicWidget();
+      return () => { cancelled = true; cleanupMusicWidget(); };
     }
     if (document.getElementById(containerId)) return;
 
     injectAPlayerFixCss();
     loadStylesheet(APLAYER_CSS_ID, "https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css");
 
-    loadScript(APLAYER_SCRIPT_ID, "https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js")
-      .then(() => Promise.all(PLAYLIST_IDS.map(fetchPlaylist)))
-      .then((results: MetingSong[][]) => {
+    // Fetch local VIP songs and Netease playlists in parallel
+    Promise.all([
+      loadScript(APLAYER_SCRIPT_ID, "https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"),
+      fetchLocalSongs(),
+      Promise.all(PLAYLIST_IDS.map(fetchPlaylist)).catch(() => [] as MetingSong[][]),
+    ])
+      .then(([, localSongs, results]) => {
+        if (cancelled || isWidgetDisabledPath(window.location.pathname)) {
+          cleanupMusicWidget();
+          return;
+        }
         if (document.getElementById(containerId)) return;
 
         const norm = (s: string) => s.replace(/[\s\-_()[\]\uFF08\uFF09]/g, "").toLowerCase();
         const seen = new Set<string>();
         const audio: APlayerAudio[] = [];
 
-        // Local VIP songs first (Tigris URLs)
-        for (const song of localPlaylist) {
-          const key = norm(song.t || song.n) + "|" + norm(song.a);
+        // Local VIP songs first (full playback from Tigris storage)
+        for (const song of localSongs) {
+          const key = norm(song.title || song.name) + "|" + norm(song.artist);
           if (!seen.has(key)) { seen.add(key); audio.push(localToAPlayerAudio(song)); }
         }
 
-        // Netease songs, skip if VIP version exists
+        // Netease songs, skip if local VIP version exists
         for (const songs of results) {
           for (const song of songs) {
             const key = norm(song.title) + "|" + norm(song.author);
@@ -160,7 +216,7 @@ function MusicWidget({ disabled }: { disabled: boolean }) {
           }
         }
 
-        document.querySelector(".aplayer")?.remove();
+        cleanupMusicWidget();
         const wrapper = document.createElement("div");
         wrapper.id = containerId;
         document.body.appendChild(wrapper);
@@ -173,22 +229,30 @@ function MusicWidget({ disabled }: { disabled: boolean }) {
       })
       .catch(() => undefined);
 
-    return () => {
-      removeElement(APLAYER_SCRIPT_ID); removeElement(APLAYER_CSS_ID);
-      removeElement(APLAYER_FIX_CSS_ID); removeElement(containerId);
-      document.querySelector(".aplayer")?.remove();
-    };
+    return () => { cancelled = true; cleanupMusicWidget(); };
   }, [disabled]);
   return null;
 }
 
 export function BlogWidgets() {
   const [location] = useLocation();
-  const disabled = location.startsWith("/admin") || location.startsWith("/login") || location.startsWith("/callback");
+  const pathname = typeof window !== "undefined" ? window.location.pathname : location;
+  const disabled = isWidgetDisabledPath(location) || isWidgetDisabledPath(pathname);
+
+  useEffect(() => {
+    if (disabled) {
+      cleanupGlobalWidgetArtifacts();
+    }
+  }, [disabled]);
+
+  if (disabled) {
+    return null;
+  }
+
   return (
     <>
-      <MusicWidget disabled={disabled} />
-      <Live2DWidget disabled={disabled} />
+      <MusicWidget disabled={false} />
+      <Live2DWidget disabled={false} />
     </>
   );
 }

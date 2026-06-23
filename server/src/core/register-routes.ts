@@ -1,5 +1,6 @@
 import type { RinApp } from "./app-types";
 import { AIImageService } from "../services/ai-image";
+import { MusicStatusService } from "../services/music-status";
 import { PasswordAuthService } from "../services/auth";
 import { CommentService } from "../services/comments";
 import { ConfigService } from "../services/config";
@@ -7,6 +8,7 @@ import { FaviconService } from "../services/favicon";
 import { FeedService, SearchService, WordPressService } from "../services/feed";
 import { FriendService } from "../services/friends";
 import { MomentsService } from "../services/moments";
+import { MusicProxyService } from "../services/music-proxy";
 import { RSSService } from "../services/rss";
 import { BlobService, StorageService } from "../services/storage";
 import { TagService } from "../services/tag";
@@ -28,6 +30,8 @@ export function registerRoutes(app: RinApp) {
   app.route("/auth", PasswordAuthService());
   app.route("/ai", AIImageService());
   app.route("/config", ConfigService());
+  app.route("/music", MusicProxyService());
+  app.route("/music-status", MusicStatusService());
   app.route("/", RSSService());
   app.route("/favicon", FaviconService());
   app.route("/favicon.ico", FaviconService());

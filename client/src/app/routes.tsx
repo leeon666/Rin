@@ -13,6 +13,7 @@ import { useSiteConfig } from "../hooks/useSiteConfig";
 import { CallbackPage } from "../page/callback";
 import { AIImagePage } from "../page/ai-image";
 import { CompatTasksPage } from "../page/compat-tasks";
+import { MusicStatusPage } from "../page/music-status";
 import { ErrorPage } from "../page/error";
 import { FeedPage, TOCHeader } from "../page/feed";
 import { FeedsPage } from "../page/feeds";
@@ -91,6 +92,10 @@ export function AppRoutes() {
 
       <AdminRoute path="/admin/ai-image" requirePermission title={t("ai_image.title")} description={t("admin.ai_image_description")}>
         <AIImagePage />
+      </AdminRoute>
+
+      <AdminRoute path="/admin/music-status" requirePermission title={t("admin.music_status.title")} description={t("admin.music_status.description")}>
+        <MusicStatusPage />
       </AdminRoute>
 
       <AppRoute path="/callback">

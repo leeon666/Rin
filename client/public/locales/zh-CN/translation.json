@@ -11,7 +11,11 @@
     "settings_description": "在统一的后台空间中管理站点行为、集成配置和发布规则。",
     "title": "后台管理",
     "writing_description": "在独立的管理工作区中编写、编辑和发布内容。",
-    "ai_image_description": "使用 Workers AI 生成图片，并通过 CloudPaste/Koofr 保存。"
+    "ai_image_description": "使用 Workers AI 生成图片，并通过 CloudPaste/Koofr 保存。",
+    "music_status": {
+      "title": "音乐管理",
+      "description": "查看 VIP 歌曲的云存储状态，缺少云源的 VIP 歌曲播放时只有试听。"
+    }
   },
   "compat_tasks": {
     "title": "兼容任务",

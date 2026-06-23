@@ -8,6 +8,8 @@ declare global {
     CLOUDPASTE_PUBLIC_BASE?: string;
     CLOUDPASTE_AUTH_TOKEN?: string;
     CLOUDPASTE_UPLOAD_PATH?: string;
+    CLOUDPASTE_USERNAME?: string;
+    CLOUDPASTE_PASSWORD?: string;
   }
 }
 

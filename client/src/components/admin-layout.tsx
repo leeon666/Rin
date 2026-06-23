@@ -68,6 +68,7 @@ export function AdminLayout({
                 <AdminNavItem href="/admin/health" icon="ri-heart-pulse-line" label={t("health.title")} />
                 <AdminNavItem href="/admin/queue-status" icon="ri-todo-line" label={t("queue_status.title")} />
                 <AdminNavItem href="/admin/compat-tasks" icon="ri-history-line" label={t("compat_tasks.title")} />
+                <AdminNavItem href="/admin/music-status" icon="ri-music-2-line" label={t("admin.music_status.title")} />
               </div>
             </div>
           </div>

@@ -217,6 +217,11 @@ jobs:
           RSS_TITLE: ${{ vars.RSS_TITLE || '' }}
           RSS_DESCRIPTION: ${{ vars.RSS_DESCRIPTION || '' }}
           CACHE_STORAGE_MODE: ${{ vars.CACHE_STORAGE_MODE || 's3' }}
+          CLOUDPASTE_API_BASE: ${{ vars.CLOUDPASTE_API_BASE || 'https://cloudpaste-leeon-backend.leeon123.workers.dev' }}
+          CLOUDPASTE_PUBLIC_BASE: ${{ vars.CLOUDPASTE_PUBLIC_BASE || 'https://leeon123.eoty.cn' }}
+          CLOUDPASTE_UPLOAD_PATH: ${{ vars.CLOUDPASTE_UPLOAD_PATH || '/tigris/rin/' }}
+          CLOUDPASTE_USERNAME: ${{ secrets.CLOUDPASTE_USERNAME || '' }}
+          CLOUDPASTE_PASSWORD: ${{ secrets.CLOUDPASTE_PASSWORD || '' }}
         run: |
           set -euo pipefail
           if [[ "${{ needs.prepare.outputs.is_production }}" == "true" ]]; then
