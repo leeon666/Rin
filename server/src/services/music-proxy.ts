@@ -20,6 +20,10 @@ const LISTING_CACHE_MS = 10 * 60 * 1000; // 10 minutes
 
 const CLOUDPASTE_MOUNT = "tigris";
 const CLOUDPASTE_MUSIC_FOLDER = "music";
+
+function buildCloudPasteAuthHeader(token: string): string {
+    return token.startsWith("ApiKey ") || token.startsWith("Bearer ") ? token : `ApiKey ${token}`;
+}
 function getPublicMusicId(filename: string): string {
     let hash = 2166136261;
     for (let i = 0; i < filename.length; i++) {
@@ -47,6 +51,10 @@ async function getCloudPasteToken(env: Env): Promise<string | null> {
     // Return cached token if still valid (with 1 hour buffer)
     if (cachedToken && cachedToken.expiresAt > Date.now() + 3600 * 1000) {
         return cachedToken.token;
+    }
+
+    if (env.CLOUDPASTE_AUTH_TOKEN) {
+        return env.CLOUDPASTE_AUTH_TOKEN;
     }
 
     const baseUrl = env.CLOUDPASTE_API_BASE || "https://cloudpaste-leeon-backend.leeon123.workers.dev";
@@ -104,7 +112,7 @@ async function getPresignedUrl(env: Env, musicPath: string): Promise<string | nu
     const resp = await fetch(`${baseUrl}/api/fs/download?path=${encodedPath}`, {
         method: "HEAD",
         redirect: "manual",
-        headers: { "Authorization": `Bearer ${token}` },
+        headers: { "Authorization": buildCloudPasteAuthHeader(token) },
     });
 
     if (resp.status === 401) {
@@ -116,7 +124,7 @@ async function getPresignedUrl(env: Env, musicPath: string): Promise<string | nu
         const retryResp = await fetch(`${baseUrl}/api/fs/download?path=${encodedPath}`, {
             method: "HEAD",
             redirect: "manual",
-            headers: { "Authorization": `Bearer ${newToken}` },
+            headers: { "Authorization": buildCloudPasteAuthHeader(newToken) },
         });
 
         const location = retryResp.headers.get("location");
@@ -147,7 +155,7 @@ export async function listMusicFiles(env: Env): Promise<Array<{ name: string; pa
 
     try {
         const resp = await fetch(`${baseUrl}/api/fs/list?path=${encodedPath}`, {
-            headers: { "Authorization": `Bearer ${token}` },
+            headers: { "Authorization": buildCloudPasteAuthHeader(token) },
         });
 
         if (resp.status === 401) {
@@ -156,7 +164,7 @@ export async function listMusicFiles(env: Env): Promise<Array<{ name: string; pa
             if (!newToken) return [];
 
             const retryResp = await fetch(`${baseUrl}/api/fs/list?path=${encodedPath}`, {
-                headers: { "Authorization": `Bearer ${newToken}` },
+                headers: { "Authorization": buildCloudPasteAuthHeader(newToken) },
             });
             const data = await retryResp.json() as any;
             if (!data.success) return [];
@@ -338,7 +346,7 @@ export function MusicProxyService(): Hono<{
                 `${baseUrl}/api/fs/upload`,
                 {
                     method: "POST",
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: { Authorization: buildCloudPasteAuthHeader(token) },
                     body: uploadForm,
                 }
             );
