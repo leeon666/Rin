@@ -95,10 +95,14 @@ function getTemporaryImageStoragePrefix(env: Env) {
 }
 
 function waitUntil(c: AppContext, task: Promise<unknown>) {
-  const executionCtx = (c as unknown as { executionCtx?: ExecutionContext }).executionCtx;
-  if (executionCtx && typeof executionCtx.waitUntil === "function") {
-    executionCtx.waitUntil(task);
-    return;
+  try {
+    const executionCtx = (c as unknown as { executionCtx?: ExecutionContext }).executionCtx;
+    if (executionCtx && typeof executionCtx.waitUntil === "function") {
+      executionCtx.waitUntil(task);
+      return;
+    }
+  } catch {
+    // Hono throws when a request was not created with an ExecutionContext.
   }
   void task;
 }

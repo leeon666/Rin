@@ -90,6 +90,11 @@ function cleanupMusicWidget() {
   removeElements(".aplayer, .aplayer-lrc, .aplayer-list, .aplayer-notice, .aplayer-body, .aplayer-miniswitcher");
 }
 
+function cleanupMusicInstance() {
+  removeElement("rin-music-widget");
+  removeElements(".aplayer, .aplayer-lrc, .aplayer-list, .aplayer-notice, .aplayer-body, .aplayer-miniswitcher");
+}
+
 function Live2DWidget({ disabled }: { disabled: boolean }) {
   useEffect(() => {
     let cancelled = false;
@@ -224,7 +229,7 @@ function MusicWidget({ disabled }: { disabled: boolean }) {
           }
         }
 
-        cleanupMusicWidget();
+        cleanupMusicInstance();
         const wrapper = document.createElement("div");
         wrapper.id = containerId;
         document.body.appendChild(wrapper);

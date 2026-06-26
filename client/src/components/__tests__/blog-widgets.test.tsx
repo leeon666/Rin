@@ -1,5 +1,5 @@
 import "../../test/setup";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { BlogWidgets } from "../blog-widgets";
 
@@ -20,6 +20,8 @@ describe("BlogWidgets", () => {
 
   afterEach(() => {
     cleanup();
+    Reflect.deleteProperty(globalThis, "APlayer");
+    Reflect.deleteProperty(globalThis, "fetch");
     document.head.innerHTML = "";
     document.body.innerHTML = "";
   });
@@ -41,5 +43,29 @@ describe("BlogWidgets", () => {
 
     expect(document.getElementById("waifu")).toBe(waifu);
     expect(waifu.style.display).toBe("");
+  });
+
+  it("keeps APlayer assets loaded when recreating the music instance", async () => {
+    (globalThis as typeof globalThis & { APlayer?: unknown }).APlayer = vi.fn((opts: { container: HTMLElement }) => {
+      opts.container.className = "aplayer aplayer-fixed aplayer-narrow";
+      return { destroy: vi.fn(), list: { show: vi.fn(), hide: vi.fn(), audios: [] } };
+    });
+    (globalThis as typeof globalThis & { fetch?: unknown }).fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const body = url.includes("/api/music/list") ? { songs: [] } : [];
+      return new Response(JSON.stringify(body), { status: 200 });
+    });
+
+    render(<BlogWidgets />);
+
+    const script = document.getElementById("rin-aplayer-script") as HTMLScriptElement;
+    expect(script).toBeTruthy();
+    script.dispatchEvent(new Event("load"));
+
+    await waitFor(() => {
+      expect(document.querySelector(".aplayer")).toBeTruthy();
+    });
+    expect(document.getElementById("rin-aplayer-css")).toBeTruthy();
+    expect(document.getElementById("rin-aplayer-script")).toBeTruthy();
   });
 });

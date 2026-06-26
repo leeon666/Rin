@@ -53,4 +53,16 @@ describe("handleFetch", () => {
     expect(assetFetch).toHaveBeenCalledTimes(0);
     expect(new URL(getAppFetch.mock.calls[0][0].url).pathname).toBe("/blob/images/test.txt");
   });
+
+  it("passes the ExecutionContext through to app routes", async () => {
+    getAppFetch.mockResolvedValue(new Response("api-body", { status: 200 }));
+
+    const { handleFetch } = await import("../fetch-handler");
+    const ctx = { waitUntil: mock() } as unknown as ExecutionContext;
+
+    await handleFetch(new Request("http://localhost/api/ai/image"), {} as Env, ctx);
+
+    expect(getAppFetch).toHaveBeenCalledTimes(1);
+    expect(getAppFetch.mock.calls[0][2]).toBe(ctx);
+  });
 });
