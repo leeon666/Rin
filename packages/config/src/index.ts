@@ -16,7 +16,7 @@ export const CLIENT_CONFIG_DEFAULTS = new Map(
     "login.enabled": true,
     "site.name": "Rin",
     "site.description": "A lightweight personal blogging system",
-    "site.avatar": "",
+    "site.avatar": "/avatar.jpg",
     "site.page_size": 5,
   }),
 );

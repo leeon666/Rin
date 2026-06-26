@@ -59,22 +59,27 @@ function removeElements(selector: string) {
   document.querySelectorAll(selector).forEach((element) => element.remove());
 }
 
+function setElementsDisplay(selector: string, display: string) {
+  document.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+    element.style.display = display;
+  });
+}
+
 function isWidgetDisabledPath(pathname: string) {
   return pathname.startsWith("/admin") || pathname.startsWith("/login") || pathname.startsWith("/callback");
 }
 
 function cleanupGlobalWidgetArtifacts() {
   cleanupMusicWidget();
-  cleanupLive2DWidget();
+  hideLive2DWidget();
 }
 
-function cleanupLive2DWidget() {
-  removeElement("waifu");
-  removeElement("waifu-toggle");
-  removeElement("waifu-tips");
-  removeElements(".waifu, #live2d, canvas[id*='live2d'], .live2d-widget-container");
-  removeElement(LIVE2D_CSS_ID);
-  removeElement(LIVE2D_SCRIPT_ID);
+function hideLive2DWidget() {
+  setElementsDisplay("#waifu, #waifu-toggle, #waifu-tips, .waifu, #live2d, canvas[id*='live2d'], .live2d-widget-container", "none");
+}
+
+function showLive2DWidget() {
+  setElementsDisplay("#waifu, #waifu-toggle, #waifu-tips, .waifu, #live2d, canvas[id*='live2d'], .live2d-widget-container", "");
 }
 
 function cleanupMusicWidget() {
@@ -89,18 +94,21 @@ function Live2DWidget({ disabled }: { disabled: boolean }) {
   useEffect(() => {
     let cancelled = false;
     if (disabled || window.innerWidth < 768) {
-      cleanupLive2DWidget();
-      return () => { cancelled = true; cleanupLive2DWidget(); };
+      hideLive2DWidget();
+      return () => { cancelled = true; hideLive2DWidget(); };
     }
+    showLive2DWidget();
     loadStylesheet(LIVE2D_CSS_ID, "https://cdn.jsdelivr.net/gh/nova1751/live2d-api@latest/css/left.min.css");
     loadScript(LIVE2D_SCRIPT_ID, "https://cdn.jsdelivr.net/gh/nova1751/live2d-api@latest/jsdelivr/random/autoload.min.js")
       .then(() => {
         if (cancelled || isWidgetDisabledPath(window.location.pathname)) {
-          cleanupLive2DWidget();
+          hideLive2DWidget();
+        } else {
+          showLive2DWidget();
         }
       })
       .catch(() => undefined);
-    return () => { cancelled = true; cleanupLive2DWidget(); };
+    return () => { cancelled = true; hideLive2DWidget(); };
   }, [disabled]);
   return null;
 }

@@ -1,7 +1,7 @@
 import "../../test/setup";
-import { render, waitFor } from "@testing-library/react";
+import { cleanup, render, waitFor } from "@testing-library/react";
 import type { MutableRefObject } from "react";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { useImageLoadState } from "../use-image-load-state";
 
 function TestImage({ src, complete, naturalWidth }: { src: string; complete: boolean; naturalWidth: number }) {
@@ -35,6 +35,10 @@ function TestImage({ src, complete, naturalWidth }: { src: string; complete: boo
 }
 
 describe("useImageLoadState", () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   it("marks a cached image as loaded after src changes", async () => {
     const { getByTestId, rerender } = render(<TestImage src="https://example.com/a.png" complete={false} naturalWidth={0} />);
 

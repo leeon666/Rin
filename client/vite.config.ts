@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url'
 export default defineConfig(({ mode }) => {
   const configDir = dirname(fileURLToPath(import.meta.url));
   const isDev = mode === 'development';
+  const openBundleVisualizer = process.env.RIN_OPEN_BUNDLE_VISUALIZER === "true";
   const serverPort = Number(process.env.RIN_SERVER_PORT || "11499");
   const serverTarget = `http://127.0.0.1:${serverPort}`;
   const cacheDir = process.env.RIN_VITE_CACHE_DIR || "../.vite/client";
@@ -32,8 +33,7 @@ export default defineConfig(({ mode }) => {
           })
         },
       },
-      // Only open visualizer in build mode
-      visualizer({ open: !isDev })
+      visualizer({ open: !isDev && openBundleVisualizer })
     ],
     server: {
       proxy: {

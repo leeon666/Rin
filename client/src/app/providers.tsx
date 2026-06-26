@@ -19,6 +19,8 @@ export function AppProviders({
       <ProfileContext.Provider value={profile}>
         <Helmet>
           <link rel="icon" href="/favicon.ico" />
+          <link rel="icon" type="image/png" href="/favicon.png" />
+          <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         </Helmet>
         {children}
       </ProfileContext.Provider>

@@ -116,7 +116,7 @@ describe("ConfigService", () => {
             expect(res.status).toBe(200);
             const data = await res.json() as Record<string, any>;
             // API key should be masked
-            expect(data["ai_summary.api_key"]).toBe("••••••••");
+            expect(data["ai_summary.api_key"]).toBe("********");
         });
     });
 

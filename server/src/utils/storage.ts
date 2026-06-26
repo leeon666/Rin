@@ -159,6 +159,11 @@ function buildBlobUrl(storageKey: string, baseUrl?: string) {
   return `${trimTrailingSlash(baseUrl)}${path}`;
 }
 
+function buildCloudPastePublicUrl(target: CloudPasteStorageTarget, storageKey: string) {
+  const publicPath = normalizeCloudPasteRoot(path_join(target.uploadRoot, storageKey));
+  return `${target.publicBaseUrl}/api/p/${encodeStorageKey(publicPath)}`;
+}
+
 function buildCloudPasteFsPath(env: Env, storageKey: string) {
   const root = normalizeCloudPasteRoot(env.CLOUDPASTE_UPLOAD_PATH || "/");
   return path_join(root, storageKey);
@@ -407,7 +412,7 @@ export async function headStorageObject(env: Env, storageKey: string): Promise<R
 
 export function getStoragePublicUrl(env: Env, storageKey: string, baseUrl?: string) {
   if (hasCloudPasteConfig(env)) {
-    return buildBlobUrl(storageKey, baseUrl);
+    return buildCloudPastePublicUrl(resolveCloudPasteTarget(env, env.S3_FOLDER || ""), storageKey);
   }
 
   if (env.S3_ACCESS_HOST) {
