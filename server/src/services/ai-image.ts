@@ -1,16 +1,12 @@
-﻿import { Hono } from "hono";
+import { Hono } from "hono";
 import type { AppContext } from "../core/hono-types";
 import { profileAsync } from "../core/server-timing";
-import { deleteStorageObjects, listStorageObjects, putStorageObject } from "../utils/storage";
-import { path_join } from "../utils/path";
 
 const DEFAULT_IMAGE_MODEL = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
 const DEFAULT_WIDTH = 1024;
 const DEFAULT_HEIGHT = 1024;
 const DEFAULT_STEPS = 20;
 const DEFAULT_GUIDANCE = 7.5;
-const AI_IMAGE_PREFIX = "ai-images/";
-const MAX_TEMP_AI_IMAGES = 3;
 
 type ImageGenerationBody = {
   prompt?: string;
@@ -77,62 +73,18 @@ async function normalizeImageResult(result: unknown): Promise<{ bytes: Uint8Arra
   throw new Error("Workers AI did not return an image");
 }
 
-function extensionFromContentType(contentType: string) {
-  const normalized = contentType.toLowerCase();
-  if (normalized.includes("png")) return "png";
-  if (normalized.includes("webp")) return "webp";
-  return "jpg";
-}
-
-function buildStorageKey(contentType: string) {
-  const date = new Date().toISOString().slice(0, 10);
-  const extension = extensionFromContentType(contentType);
-  return `${AI_IMAGE_PREFIX}${date}/${crypto.randomUUID()}.${extension}`;
-}
-
-function getTemporaryImageStoragePrefix(env: Env) {
-  return path_join(env.S3_FOLDER || "", AI_IMAGE_PREFIX);
-}
-
-function waitUntil(c: AppContext, task: Promise<unknown>) {
-  try {
-    const executionCtx = (c as unknown as { executionCtx?: ExecutionContext }).executionCtx;
-    if (executionCtx && typeof executionCtx.waitUntil === "function") {
-      executionCtx.waitUntil(task);
-      return;
-    }
-  } catch {
-    // Hono throws when a request was not created with an ExecutionContext.
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = "";
+  const chunkSize = 0x8000;
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
   }
-  void task;
+  return btoa(binary);
 }
 
-async function pruneTemporaryImages(env: Env, keepKey: string) {
-  try {
-    const storagePrefix = getTemporaryImageStoragePrefix(env);
-    const objects = await listStorageObjects(env, storagePrefix);
-    const sorted = objects
-      .filter((object) => object.key.startsWith(storagePrefix))
-      .sort((a, b) => {
-        const aTime = a.modified ? Date.parse(a.modified) : 0;
-        const bTime = b.modified ? Date.parse(b.modified) : 0;
-        if (aTime !== bTime) return bTime - aTime;
-        return b.key.localeCompare(a.key);
-      });
-
-    const protectedKeys = new Set(sorted.slice(0, MAX_TEMP_AI_IMAGES).map((object) => object.key));
-    protectedKeys.add(keepKey);
-
-    const staleKeys = sorted
-      .filter((object) => !protectedKeys.has(object.key))
-      .map((object) => object.key);
-
-    if (staleKeys.length > 0) {
-      await deleteStorageObjects(env, staleKeys);
-    }
-  } catch (error) {
-    console.warn("AI image temporary cleanup failed", error);
-  }
+function buildDataUrl(bytes: Uint8Array, contentType: string) {
+  return `data:${contentType};base64,${bytesToBase64(bytes)}`;
 }
 
 export function AIImageService(): Hono {
@@ -185,17 +137,11 @@ export function AIImageService(): Hono {
     try {
       const aiResult = await profileAsync(c, "ai_image_generate", () => env.AI.run(model as any, inputs as any));
       const image = await profileAsync(c, "ai_image_normalize", () => normalizeImageResult(aiResult));
-      const storageKey = buildStorageKey(image.contentType);
-      const origin = new URL(c.req.url).origin;
-      const stored = await profileAsync(c, "ai_image_store", () =>
-        putStorageObject(env, storageKey, image.bytes, image.contentType, origin),
-      );
-      waitUntil(c, pruneTemporaryImages(env, stored.key));
+      const url = buildDataUrl(image.bytes, image.contentType);
 
       return c.json({
-        url: stored.url,
-        key: stored.key,
-        markdown: `![${prompt.replace(/\]/g, "")}](${stored.url})`,
+        url,
+        markdown: `![${prompt.replace(/\]/g, "")}](${url})`,
         model,
         width,
         height,

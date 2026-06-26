@@ -303,7 +303,7 @@ export interface AIImageGenerateRequest {
 
 export interface AIImageGenerateResponse {
   url: string;
-  key: string;
+  key?: string;
   markdown: string;
   model: string;
   width: number;

@@ -148,14 +148,6 @@ export function AIImagePage() {
     }
   };
 
-  const copyText = async (value: string, message: string) => {
-    try {
-      await navigator.clipboard.writeText(value);
-      showAlert(message);
-    } catch {
-      showAlert(t("ai_image.result.copy_failed"));
-    }
-  };
 
   return (
     <div className="flex w-full flex-col gap-4">
@@ -240,16 +232,6 @@ export function AIImagePage() {
                   alt={t("ai_image.result.image_alt")}
                   className="aspect-square w-full rounded-xl border border-black/10 object-cover dark:border-white/10"
                 />
-                <div className="space-y-2 text-sm">
-                  <p className="break-all text-neutral-600 dark:text-neutral-300">{result.url}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button secondary title={t("ai_image.result.copy_url")} onClick={() => copyText(result.url, t("ai_image.result.url_copied"))} />
-                    <Button secondary title={t("ai_image.result.copy_markdown")} onClick={() => copyText(result.markdown, t("ai_image.result.markdown_copied"))} />
-                  </div>
-                </div>
-                <pre className="whitespace-pre-wrap break-all rounded-xl border border-black/10 bg-neutral-50 p-3 text-xs text-neutral-600 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300">
-                  {result.markdown}
-                </pre>
               </div>
             ) : (
               <div className="rounded-xl border border-dashed border-black/10 p-6 text-sm text-neutral-500 dark:border-white/10 dark:text-neutral-400">

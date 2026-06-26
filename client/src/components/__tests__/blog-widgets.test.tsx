@@ -45,16 +45,22 @@ describe("BlogWidgets", () => {
     expect(waifu.style.display).toBe("");
   });
 
-  it("keeps APlayer assets loaded when recreating the music instance", async () => {
-    (globalThis as typeof globalThis & { APlayer?: unknown }).APlayer = vi.fn((opts: { container: HTMLElement }) => {
+  it("keeps APlayer assets loaded and uses the local music list", async () => {
+    let playerAudio: Array<{ name: string; artist: string; url: string }> = [];
+    (globalThis as typeof globalThis & { APlayer?: unknown }).APlayer = vi.fn((opts: { container: HTMLElement; audio: Array<{ name: string; artist: string; url: string }> }) => {
       opts.container.className = "aplayer aplayer-fixed aplayer-narrow";
+      playerAudio = opts.audio;
       return { destroy: vi.fn(), list: { show: vi.fn(), hide: vi.fn(), audios: [] } };
     });
-    (globalThis as typeof globalThis & { fetch?: unknown }).fetch = vi.fn(async (input: RequestInfo | URL) => {
+
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
-      const body = url.includes("/api/music/list") ? { songs: [] } : [];
-      return new Response(JSON.stringify(body), { status: 200 });
+      if (url !== "/api/music/list") {
+        throw new Error(`Unexpected playlist request: ${url}`);
+      }
+      return new Response(JSON.stringify({ songs: [{ name: "Local", title: "Local", artist: "Artist", url: "/api/music/stream/local" }] }), { status: 200 });
     });
+    (globalThis as typeof globalThis & { fetch?: unknown }).fetch = fetchMock as typeof fetch;
 
     render(<BlogWidgets />);
 
@@ -67,5 +73,9 @@ describe("BlogWidgets", () => {
     });
     expect(document.getElementById("rin-aplayer-css")).toBeTruthy();
     expect(document.getElementById("rin-aplayer-script")).toBeTruthy();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/music/list", { cache: "no-store" });
+    expect(playerAudio).toHaveLength(1);
+    expect(playerAudio[0]?.url).toBe("/api/music/stream/local");
   });
 });

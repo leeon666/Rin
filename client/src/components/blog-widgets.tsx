@@ -7,15 +7,6 @@ const APLAYER_SCRIPT_ID = "rin-aplayer-script";
 const APLAYER_CSS_ID = "rin-aplayer-css";
 const APLAYER_FIX_CSS_ID = "rin-aplayer-fix-css";
 
-const PLAYLIST_IDS = ["13715807689", "3778678"];
-
-interface MetingSong {
-  title: string;
-  author: string;
-  url: string;
-  pic: string;
-  lrc: string;
-}
 
 interface LocalSong {
   name: string;
@@ -140,12 +131,6 @@ declare const APlayer: new (opts: {
   audio: APlayerAudio[];
 }) => { destroy(): void; list: { show(): void; hide(): void; audios: APlayerAudio[] } };
 
-async function fetchPlaylist(id: string): Promise<MetingSong[]> {
-  const url = `https://api.i-meto.com/meting/api?server=netease&type=playlist&id=${id}`;
-  const resp = await fetch(url);
-  if (!resp.ok) throw new Error(`Failed to fetch playlist ${id}: ${resp.status}`);
-  return resp.json();
-}
 
 async function fetchLocalSongs(): Promise<LocalSong[]> {
   try {
@@ -158,9 +143,6 @@ async function fetchLocalSongs(): Promise<LocalSong[]> {
   }
 }
 
-function toAPlayerAudio(song: MetingSong): APlayerAudio {
-  return { name: song.title, artist: song.author, url: song.url, cover: song.pic, lrc: "" };
-}
 
 function localToAPlayerAudio(song: LocalSong): APlayerAudio {
   return {
@@ -179,6 +161,8 @@ function injectAPlayerFixCss() {
   style.textContent = `
     .aplayer .aplayer-list { overflow-y: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
     .aplayer .aplayer-list ol { max-height: none !important; }
+    .aplayer.aplayer-fixed { min-height: 66px !important; min-width: 66px !important; }
+    .aplayer.aplayer-fixed.aplayer-narrow { width: 66px !important; }
     .aplayer.aplayer-fixed .aplayer-list { max-height: 500px; }
 `;
   document.head.appendChild(style);
@@ -198,13 +182,11 @@ function MusicWidget({ disabled }: { disabled: boolean }) {
     injectAPlayerFixCss();
     loadStylesheet(APLAYER_CSS_ID, "https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css");
 
-    // Fetch local VIP songs and Netease playlists in parallel
     Promise.all([
       loadScript(APLAYER_SCRIPT_ID, "https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.js"),
       fetchLocalSongs(),
-      Promise.all(PLAYLIST_IDS.map(fetchPlaylist)).catch(() => [] as MetingSong[][]),
     ])
-      .then(([, localSongs, results]) => {
+      .then(([, localSongs]) => {
         if (cancelled || isWidgetDisabledPath(window.location.pathname)) {
           cleanupMusicWidget();
           return;
@@ -221,12 +203,10 @@ function MusicWidget({ disabled }: { disabled: boolean }) {
           if (!seen.has(key)) { seen.add(key); audio.push(localToAPlayerAudio(song)); }
         }
 
-        // Netease songs, skip if local VIP version exists
-        for (const songs of results) {
-          for (const song of songs) {
-            const key = norm(song.title) + "|" + norm(song.author);
-            if (!seen.has(key)) { seen.add(key); audio.push(toAPlayerAudio(song)); }
-          }
+
+        if (audio.length === 0) {
+          cleanupMusicWidget();
+          return;
         }
 
         cleanupMusicInstance();
