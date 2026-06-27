@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 
 const LIVE2D_SCRIPT_ID = "rin-live2d-nova-script";
@@ -60,11 +60,6 @@ function isWidgetDisabledPath(pathname: string) {
   return pathname.startsWith("/admin") || pathname.startsWith("/login") || pathname.startsWith("/callback");
 }
 
-function cleanupGlobalWidgetArtifacts() {
-  cleanupMusicWidget();
-  hideLive2DWidget();
-}
-
 function hideLive2DWidget() {
   setElementsDisplay("#waifu, #waifu-toggle, #waifu-tips, .waifu, #live2d, canvas[id*='live2d'], .live2d-widget-container", "none");
 }
@@ -81,15 +76,10 @@ function cleanupMusicWidget() {
   removeElements(".aplayer, .aplayer-lrc, .aplayer-list, .aplayer-notice, .aplayer-body, .aplayer-miniswitcher");
 }
 
-function cleanupMusicInstance() {
-  removeElement("rin-music-widget");
-  removeElements(".aplayer, .aplayer-lrc, .aplayer-list, .aplayer-notice, .aplayer-body, .aplayer-miniswitcher");
-}
-
-function Live2DWidget({ disabled }: { disabled: boolean }) {
+function Live2DWidget({ hidden }: { hidden: boolean }) {
   useEffect(() => {
     let cancelled = false;
-    if (disabled || window.innerWidth < 768) {
+    if (hidden || window.innerWidth < 768) {
       hideLive2DWidget();
       return () => { cancelled = true; hideLive2DWidget(); };
     }
@@ -105,7 +95,7 @@ function Live2DWidget({ disabled }: { disabled: boolean }) {
       })
       .catch(() => undefined);
     return () => { cancelled = true; hideLive2DWidget(); };
-  }, [disabled]);
+  }, [hidden]);
   return null;
 }
 
@@ -116,6 +106,19 @@ interface APlayerAudio {
   cover: string;
   lrc: string;
 }
+
+type APlayerInstance = {
+  destroy(): void;
+  list: {
+    show(): void;
+    hide(): void;
+    audios: APlayerAudio[];
+    index?: number;
+    switch?(index: number): void;
+  };
+  audio: HTMLAudioElement;
+  play?: () => void;
+};
 
 declare const APlayer: new (opts: {
   container: HTMLElement;
@@ -129,7 +132,12 @@ declare const APlayer: new (opts: {
   listFolded?: boolean;
   listMaxHeight?: number;
   audio: APlayerAudio[];
-}) => { destroy(): void; list: { show(): void; hide(): void; audios: APlayerAudio[] } };
+}) => {
+  destroy(): void;
+  list: { show(): void; hide(): void; audios: APlayerAudio[]; index?: number; switch?(index: number): void };
+  audio: HTMLAudioElement;
+  play?: () => void;
+};
 
 
 async function fetchLocalSongs(): Promise<LocalSong[]> {
@@ -154,30 +162,76 @@ function localToAPlayerAudio(song: LocalSong): APlayerAudio {
   };
 }
 
+function applyMusicVisibility(hidden: boolean) {
+  const wrapper = document.getElementById("rin-music-widget") as HTMLDivElement | null;
+  if (wrapper) {
+    wrapper.style.display = hidden ? "none" : "";
+  }
+}
+
+function bindMusicFallback(player: APlayerInstance) {
+  const audio = player.audio;
+  if (!audio) {
+    return;
+  }
+
+  const advance = () => {
+    if (player.list.audios.length <= 1) {
+      return;
+    }
+
+    const currentIndex = typeof player.list.index === "number" ? player.list.index : 0;
+    const nextIndex = (currentIndex + 1) % player.list.audios.length;
+    player.list.switch?.(nextIndex);
+    player.play?.();
+  };
+
+  audio.addEventListener("ended", advance);
+  audio.addEventListener("error", advance);
+  audio.addEventListener("stalled", () => {
+    if (document.visibilityState === "hidden") {
+      advance();
+    }
+  });
+}
+
 function injectAPlayerFixCss() {
   if (document.getElementById(APLAYER_FIX_CSS_ID)) return;
   const style = document.createElement("style");
   style.id = APLAYER_FIX_CSS_ID;
   style.textContent = `
+    #rin-music-widget {
+      position: fixed !important;
+      left: 0 !important;
+      bottom: 0 !important;
+      z-index: 2147483646 !important;
+      width: auto !important;
+      max-width: none !important;
+      transform: translateZ(0);
+      pointer-events: auto;
+    }
     .aplayer .aplayer-list { overflow-y: auto !important; -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
     .aplayer .aplayer-list ol { max-height: none !important; }
     .aplayer.aplayer-fixed { min-height: 66px !important; min-width: 66px !important; }
     .aplayer.aplayer-fixed.aplayer-narrow { width: 66px !important; }
+    .aplayer.aplayer-fixed .aplayer-body { position: relative !important; left: auto !important; right: auto !important; bottom: auto !important; }
     .aplayer.aplayer-fixed .aplayer-list { max-height: 500px; }
 `;
   document.head.appendChild(style);
 }
 
-function MusicWidget({ disabled }: { disabled: boolean }) {
+function MusicWidget({ hidden }: { hidden: boolean }) {
+  const hiddenRef = useRef(hidden);
+  const playerRef = useRef<APlayerInstance | null>(null);
+
+  useEffect(() => {
+    hiddenRef.current = hidden;
+    applyMusicVisibility(hidden);
+  }, [hidden]);
+
   useEffect(() => {
     const containerId = "rin-music-widget";
     let cancelled = false;
-
-    if (disabled) {
-      cleanupMusicWidget();
-      return () => { cancelled = true; cleanupMusicWidget(); };
-    }
-    if (document.getElementById(containerId)) return;
 
     injectAPlayerFixCss();
     loadStylesheet(APLAYER_CSS_ID, "https://cdn.jsdelivr.net/npm/aplayer@1.10.1/dist/APlayer.min.css");
@@ -187,10 +241,7 @@ function MusicWidget({ disabled }: { disabled: boolean }) {
       fetchLocalSongs(),
     ])
       .then(([, localSongs]) => {
-        if (cancelled || isWidgetDisabledPath(window.location.pathname)) {
-          cleanupMusicWidget();
-          return;
-        }
+        if (cancelled) return;
         if (document.getElementById(containerId)) return;
 
         const norm = (s: string) => s.replace(/[\s\-_()[\]\uFF08\uFF09]/g, "").toLowerCase();
@@ -209,43 +260,40 @@ function MusicWidget({ disabled }: { disabled: boolean }) {
           return;
         }
 
-        cleanupMusicInstance();
         const wrapper = document.createElement("div");
         wrapper.id = containerId;
+        wrapper.style.display = hiddenRef.current ? "none" : "";
         document.body.appendChild(wrapper);
 
-        new APlayer({
+        const player = new APlayer({
           container: wrapper, fixed: true, mini: true, autoplay: false,
-          theme: "#FC466B", loop: "all", order: "random", preload: "none",
+          theme: "#FC466B", loop: "all", order: "random", preload: "metadata",
           listFolded: true, listMaxHeight: 500, audio,
         });
+        bindMusicFallback(player);
+        playerRef.current = player;
       })
       .catch(() => undefined);
 
-    return () => { cancelled = true; cleanupMusicWidget(); };
-  }, [disabled]);
+    return () => {
+      cancelled = true;
+      playerRef.current?.destroy();
+      playerRef.current = null;
+      cleanupMusicWidget();
+    };
+  }, []);
   return null;
 }
 
 export function BlogWidgets() {
   const [location] = useLocation();
   const pathname = typeof window !== "undefined" ? window.location.pathname : location;
-  const disabled = isWidgetDisabledPath(location) || isWidgetDisabledPath(pathname);
-
-  useEffect(() => {
-    if (disabled) {
-      cleanupGlobalWidgetArtifacts();
-    }
-  }, [disabled]);
-
-  if (disabled) {
-    return null;
-  }
+  const hidden = isWidgetDisabledPath(location) || isWidgetDisabledPath(pathname);
 
   return (
     <>
-      <MusicWidget disabled={false} />
-      <Live2DWidget disabled={false} />
+      <MusicWidget hidden={hidden} />
+      <Live2DWidget hidden={hidden} />
     </>
   );
 }
